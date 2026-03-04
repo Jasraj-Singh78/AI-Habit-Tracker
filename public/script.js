@@ -97,16 +97,16 @@ async function handleLogout() {
 async function handleSessionSubmit(event) {
     event.preventDefault();
     const subject = document.getElementById("sessionSubject").value;
-    const durationMinutes = Number(document.getElementById("sessionDuration").value);
+    const duration = Number(document.getElementById("sessionDuration").value);
     const mood = document.getElementById("sessionMood").value;
     const date = document.getElementById("sessionDate").value || undefined;
     const errorEl = document.getElementById("sessionError");
     errorEl.textContent = "";
 
     try {
-        await api("/api/sessions", {
+        await api("/api/study/add", {
             method: "POST",
-            body: JSON.stringify({ subject, durationMinutes, mood, date }),
+            body: JSON.stringify({ subject, duration, mood, date }),
         });
 
         // clear duration and mood, keep subject
@@ -120,57 +120,69 @@ async function handleSessionSubmit(event) {
 }
 
 async function loadDashboard() {
-    await Promise.all([loadSummary(), loadHistory()]);
-}
-
-async function loadSummary() {
     try {
-        const summary = await api("/api/sessions/summary", { method: "GET" });
-        document.getElementById("totalHours").textContent = `${summary.totalHours} h`;
-        document.getElementById("totalMinutes").textContent = `${summary.totalMinutes} minutes`;
-        document.getElementById("todayMinutes").textContent = `${summary.todayMinutes} min`;
-        document.getElementById("sessionsCount").textContent = `${summary.sessionsCount} sessions`;
-
-        let topSubject = "–";
-        let topMinutes = 0;
-        Object.entries(summary.bySubject || {}).forEach(([subject, minutes]) => {
-            if (minutes > topMinutes) {
-                topMinutes = minutes;
-                topSubject = subject;
-            }
-        });
-        document.getElementById("topSubject").textContent = topSubject;
-        document.getElementById("topSubjectMinutes").textContent = topMinutes
-            ? `${topMinutes} min`
-            : "";
-
-        renderChart(summary);
+        const sessions = await api("/api/study/logs", { method: "GET" });
+        updateSummaryFromSessions(sessions);
+        renderHistoryTable(sessions);
     } catch {
         // ignore for now
     }
 }
 
-async function loadHistory() {
-    try {
-        const sessions = await api("/api/sessions", { method: "GET" });
-        const tbody = document.getElementById("historyBody");
-        tbody.innerHTML = "";
-        sessions
-            .slice()
-            .reverse()
-            .forEach((s) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${s.date}</td>
-                    <td>${s.subject}</td>
-                    <td>${s.durationMinutes} min</td>
-                    <td>${s.mood || ""}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-    } catch {
-        // ignore
-    }
+function renderHistoryTable(sessions) {
+    const tbody = document.getElementById("historyBody");
+    tbody.innerHTML = "";
+    sessions
+        .slice()
+        .reverse()
+        .forEach((s) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${s.date}</td>
+                <td>${s.subject}</td>
+                <td>${s.durationMinutes} min</td>
+                <td>${s.mood || ""}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+}
+
+function updateSummaryFromSessions(sessions) {
+    const today = new Date().toISOString().slice(0, 10);
+    let totalMinutes = 0;
+    let todayMinutes = 0;
+    const bySubject = {};
+
+    sessions.forEach((s) => {
+        const minutes = Number(s.durationMinutes) || 0;
+        totalMinutes += minutes;
+        if (s.date === today) {
+            todayMinutes += minutes;
+        }
+        const key = s.subject || "Unknown";
+        bySubject[key] = (bySubject[key] || 0) + minutes;
+    });
+
+    const totalHours = +(totalMinutes / 60).toFixed(1);
+    document.getElementById("totalHours").textContent = `${totalHours} h`;
+    document.getElementById("totalMinutes").textContent = `${totalMinutes} minutes`;
+    document.getElementById("todayMinutes").textContent = `${todayMinutes} min`;
+    document.getElementById("sessionsCount").textContent = `${sessions.length} sessions`;
+
+    let topSubject = "–";
+    let topMinutes = 0;
+    Object.entries(bySubject).forEach(([subject, minutes]) => {
+        if (minutes > topMinutes) {
+            topMinutes = minutes;
+            topSubject = subject;
+        }
+    });
+    document.getElementById("topSubject").textContent = topSubject;
+    document.getElementById("topSubjectMinutes").textContent = topMinutes
+        ? `${topMinutes} min`
+        : "";
+
+    renderChart({ bySubject });
 }
 
 function renderChart(summary) {
@@ -225,7 +237,7 @@ async function bootstrap() {
     document.getElementById("sessionForm").addEventListener("submit", handleSessionSubmit);
     document
         .getElementById("downloadReportBtn")
-        .addEventListener("click", () => (window.location.href = "/api/sessions/report"));
+        .addEventListener("click", () => (window.location.href = "/api/study/download"));
 
     initDate();
 

@@ -3,12 +3,14 @@ const fs = require("fs");
 const path = require("path");
 const session = require("express-session");
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
+const User = require("./models/User");
+const StudySession = require("./models/StudySession");
 
 const app = express();
 const PORT = 5000;
-
-const USERS_FILE = path.join(__dirname, "users.json");
-const SESSIONS_FILE = path.join(__dirname, "sessions.json");
+const MONGODB_URI =
+    process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/ai-study-habit-tracker";
 
 app.use(express.json());
 app.use(
@@ -24,23 +26,6 @@ app.use(
 );
 app.use(express.static("public"));
 
-function readJson(filePath, defaultValue) {
-    try {
-        if (!fs.existsSync(filePath)) {
-            return defaultValue;
-        }
-        const raw = fs.readFileSync(filePath, "utf8");
-        if (!raw.trim()) return defaultValue;
-        return JSON.parse(raw);
-    } catch {
-        return defaultValue;
-    }
-}
-
-function writeJson(filePath, data) {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-}
-
 function requireAuth(req, res, next) {
     if (!req.session || !req.session.userId) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -50,59 +35,65 @@ function requireAuth(req, res, next) {
 
 
 /* ==============================
-   0️⃣ Auth APIs
+   0️⃣ Auth APIs (MongoDB)
 ============================== */
 
 app.post("/api/auth/signup", async (req, res) => {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    if (!email || !password || password.length < 6) {
-        return res.status(400).json({ error: "Email and password (min 6 chars) are required" });
+        if (!email || !password || password.length < 6) {
+            return res
+                .status(400)
+                .json({ error: "Email and password (min 6 chars) are required" });
+        }
+
+        const existing = await User.findOne({ email: email.toLowerCase() }).exec();
+        if (existing) {
+            return res.status(409).json({ error: "User already exists" });
+        }
+
+        const passwordHash = bcrypt.hashSync(password, 10);
+        const user = await User.create({
+            email,
+            passwordHash,
+        });
+
+        req.session.userId = user._id.toString();
+        req.session.email = user.email;
+
+        res.status(201).json({ email: user.email });
+    } catch (err) {
+        console.error("Signup error:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
-
-    const users = readJson(USERS_FILE, []);
-    const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-        return res.status(409).json({ error: "User already exists" });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = {
-        id: Date.now().toString(),
-        email,
-        passwordHash,
-    };
-
-    users.push(user);
-    writeJson(USERS_FILE, users);
-
-    req.session.userId = user.id;
-    req.session.email = user.email;
-
-    res.status(201).json({ email: user.email });
 });
 
 app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ error: "Email and password are required" });
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: "Email and password are required" });
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase() }).exec();
+        if (!user) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        const ok = bcrypt.compareSync(password, user.passwordHash);
+        if (!ok) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        req.session.userId = user._id.toString();
+        req.session.email = user.email;
+
+        res.json({ email: user.email });
+    } catch (err) {
+        console.error("Login error:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
-
-    const users = readJson(USERS_FILE, []);
-    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) {
-        return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    req.session.userId = user.id;
-    req.session.email = user.email;
-
-    res.json({ email: user.email });
 });
 
 app.post("/api/auth/logout", (req, res) => {
@@ -218,83 +209,74 @@ app.get("/log/count", (req, res) => {
 
 
 /* ==============================
-   3️⃣ Study Session APIs
+   3️⃣ Study Session APIs (MongoDB)
 ============================== */
 
-app.post("/api/sessions", requireAuth, (req, res) => {
-    const { subject, durationMinutes, mood, date } = req.body;
-    const numericDuration = Number(durationMinutes);
+// Add a study session
+app.post("/api/study/add", requireAuth, async (req, res) => {
+    try {
+        const { subject, duration, date, mood } = req.body;
+        const numericDuration = Number(duration);
 
-    if (!subject || subject.toString().trim().length === 0 || Number.isNaN(numericDuration)) {
-        return res.status(400).json({ error: "subject and a valid numeric durationMinutes are required" });
-    }
-
-    const sessions = readJson(SESSIONS_FILE, []);
-    const sessionEntry = {
-        id: Date.now().toString(),
-        userId: req.session.userId,
-        subject: subject.toString(),
-        durationMinutes: numericDuration,
-        mood: mood || "",
-        date: date || new Date().toISOString().slice(0, 10),
-        createdAt: new Date().toISOString(),
-    };
-
-    sessions.push(sessionEntry);
-    writeJson(SESSIONS_FILE, sessions);
-
-    res.status(201).json(sessionEntry);
-});
-
-app.get("/api/sessions", requireAuth, (req, res) => {
-    const sessions = readJson(SESSIONS_FILE, []);
-    const userSessions = sessions.filter((s) => s.userId === req.session.userId);
-    res.json(userSessions);
-});
-
-app.get("/api/sessions/summary", requireAuth, (req, res) => {
-    const sessions = readJson(SESSIONS_FILE, []);
-    const userSessions = sessions.filter((s) => s.userId === req.session.userId);
-
-    const today = new Date().toISOString().slice(0, 10);
-    let totalMinutes = 0;
-    let todayMinutes = 0;
-    const bySubject = {};
-
-    for (const s of userSessions) {
-        totalMinutes += s.durationMinutes;
-        if (s.date === today) {
-            todayMinutes += s.durationMinutes;
+        if (!subject || subject.toString().trim().length === 0 || Number.isNaN(numericDuration)) {
+            return res
+                .status(400)
+                .json({ error: "subject and a valid numeric duration are required" });
         }
-        const key = s.subject;
-        bySubject[key] = (bySubject[key] || 0) + s.durationMinutes;
-    }
 
-    res.json({
-        totalMinutes,
-        totalHours: +(totalMinutes / 60).toFixed(1),
-        todayMinutes,
-        sessionsCount: userSessions.length,
-        bySubject,
-    });
+        const sessionDoc = await StudySession.create({
+            user: req.session.userId,
+            subject: subject.toString(),
+            durationMinutes: numericDuration,
+            mood: mood || "",
+            date: date || new Date().toISOString().slice(0, 10),
+        });
+
+        res.status(201).json(sessionDoc);
+    } catch (err) {
+        console.error("Add study session error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
-app.get("/api/sessions/report", requireAuth, (req, res) => {
-    const sessions = readJson(SESSIONS_FILE, []);
-    const userSessions = sessions.filter((s) => s.userId === req.session.userId);
+// Get all study logs for current user
+app.get("/api/study/logs", requireAuth, async (req, res) => {
+    try {
+        const sessions = await StudySession.find({ user: req.session.userId })
+            .sort({ date: 1, createdAt: 1 })
+            .lean()
+            .exec();
+        res.json(sessions);
+    } catch (err) {
+        console.error("Get study logs error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", 'attachment; filename="study-report.csv"');
+// Download study logs as CSV
+app.get("/api/study/download", requireAuth, async (req, res) => {
+    try {
+        const sessions = await StudySession.find({ user: req.session.userId })
+            .sort({ date: 1, createdAt: 1 })
+            .lean()
+            .exec();
 
-    const header = "Date,Subject,DurationMinutes,Mood\n";
-    const lines = userSessions.map(
-        (s) =>
-            `${s.date},${JSON.stringify(s.subject)},${s.durationMinutes},${JSON.stringify(
-                s.mood || ""
-            )}`
-    );
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", 'attachment; filename="study-report.csv"');
 
-    res.send(header + lines.join("\n"));
+        const header = "Date,Subject,DurationMinutes,Mood\n";
+        const lines = sessions.map(
+            (s) =>
+                `${s.date},${JSON.stringify(s.subject)},${s.durationMinutes},${JSON.stringify(
+                    s.mood || ""
+                )}`
+        );
+
+        res.send(header + lines.join("\n"));
+    } catch (err) {
+        console.error("Download report error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 
@@ -344,6 +326,15 @@ app.get("/download-report", (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+mongoose
+    .connect(MONGODB_URI)
+    .then(() => {
+        console.log("Connected to MongoDB");
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    })
+    .catch((err) => {
+        console.error("MongoDB connection error:", err);
+        process.exit(1);
+    });
