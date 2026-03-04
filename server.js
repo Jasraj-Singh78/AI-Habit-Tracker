@@ -24,16 +24,17 @@ app.post("/hello", (req, res) => {
 // Small feature: summarize a study session from request body
 app.post("/session-summary", (req, res) => {
     const { subject, durationMinutes, mood } = req.body;
+    const numericDuration = Number(durationMinutes);
 
-    if (!subject || !durationMinutes) {
-        return res.status(400).json({ error: "subject and durationMinutes are required" });
+    if (!subject || subject.toString().trim().length === 0 || Number.isNaN(numericDuration)) {
+        return res.status(400).json({ error: "subject and a valid numeric durationMinutes are required (0 is allowed)" });
     }
 
     res
         .status(201)
         .set("X-Study-Tracker", "SessionSummary")
         .json({
-            summary: `You studied ${subject} for ${durationMinutes} minutes.`,
+            summary: `You studied ${subject} for ${numericDuration} minutes.`,
             mood: mood || "not provided",
         });
 });
@@ -134,17 +135,23 @@ app.get("/stream", (req, res) => {
 app.get("/download-report", (req, res) => {
     const filePath = path.join(__dirname, "data.txt");
 
-    res.setHeader("Content-Disposition", 'attachment; filename="study-log.txt"');
-    const readStream = fs.createReadStream(filePath);
-
-    readStream.on("error", (err) => {
-        if (err.code === "ENOENT") {
-            return res.status(404).send("No study log found to download");
+    fs.access(filePath, fs.constants.F_OK, (err) => {
+        if (err) {
+            if (err.code === "ENOENT") {
+                return res.status(404).send("No study log found to download");
+            }
+            return res.status(500).send("Error checking report file");
         }
-        res.status(500).send("Error downloading report");
-    });
 
-    readStream.pipe(res);
+        res.setHeader("Content-Disposition", 'attachment; filename="study-log.txt"');
+        const readStream = fs.createReadStream(filePath);
+
+        readStream.on("error", () => {
+            res.status(500).send("Error downloading report");
+        });
+
+        readStream.pipe(res);
+    });
 });
 
 
