@@ -218,17 +218,88 @@ app.get("/log/count", (req, res) => {
 
 
 /* ==============================
-   3️⃣ Serving Static Files
+   3️⃣ Study Session APIs
 ============================== */
 
-// Small feature: serve the main study dashboard explicitly
-app.get("/study-dashboard", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+app.post("/api/sessions", requireAuth, (req, res) => {
+    const { subject, durationMinutes, mood, date } = req.body;
+    const numericDuration = Number(durationMinutes);
+
+    if (!subject || subject.toString().trim().length === 0 || Number.isNaN(numericDuration)) {
+        return res.status(400).json({ error: "subject and a valid numeric durationMinutes are required" });
+    }
+
+    const sessions = readJson(SESSIONS_FILE, []);
+    const sessionEntry = {
+        id: Date.now().toString(),
+        userId: req.session.userId,
+        subject: subject.toString(),
+        durationMinutes: numericDuration,
+        mood: mood || "",
+        date: date || new Date().toISOString().slice(0, 10),
+        createdAt: new Date().toISOString(),
+    };
+
+    sessions.push(sessionEntry);
+    writeJson(SESSIONS_FILE, sessions);
+
+    res.status(201).json(sessionEntry);
+});
+
+app.get("/api/sessions", requireAuth, (req, res) => {
+    const sessions = readJson(SESSIONS_FILE, []);
+    const userSessions = sessions.filter((s) => s.userId === req.session.userId);
+    res.json(userSessions);
+});
+
+app.get("/api/sessions/summary", requireAuth, (req, res) => {
+    const sessions = readJson(SESSIONS_FILE, []);
+    const userSessions = sessions.filter((s) => s.userId === req.session.userId);
+
+    const today = new Date().toISOString().slice(0, 10);
+    let totalMinutes = 0;
+    let todayMinutes = 0;
+    const bySubject = {};
+
+    for (const s of userSessions) {
+        totalMinutes += s.durationMinutes;
+        if (s.date === today) {
+            todayMinutes += s.durationMinutes;
+        }
+        const key = s.subject;
+        bySubject[key] = (bySubject[key] || 0) + s.durationMinutes;
+    }
+
+    res.json({
+        totalMinutes,
+        totalHours: +(totalMinutes / 60).toFixed(1),
+        todayMinutes,
+        sessionsCount: userSessions.length,
+        bySubject,
+    });
+});
+
+app.get("/api/sessions/report", requireAuth, (req, res) => {
+    const sessions = readJson(SESSIONS_FILE, []);
+    const userSessions = sessions.filter((s) => s.userId === req.session.userId);
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="study-report.csv"');
+
+    const header = "Date,Subject,DurationMinutes,Mood\n";
+    const lines = userSessions.map(
+        (s) =>
+            `${s.date},${JSON.stringify(s.subject)},${s.durationMinutes},${JSON.stringify(
+                s.mood || ""
+            )}`
+    );
+
+    res.send(header + lines.join("\n"));
 });
 
 
 /* ==============================
-   4️⃣ File Streams
+   4️⃣ Serving Static Files & File Streams (legacy demos)
 ============================== */
 
 app.get("/stream", (req, res) => {

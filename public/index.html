@@ -5,33 +5,128 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="app-shell">
+        <header class="app-header">
+            <div class="app-logo">
+                <span class="app-logo-icon">📘</span>
+                <span class="app-logo-text">AI Study Habit Tracker</span>
+            </div>
+            <div class="app-header-right">
+                <div id="currentUserEmail" class="user-email"></div>
+                <button id="logoutBtn" class="ghost-btn hidden">Logout</button>
+            </div>
+        </header>
 
-    <div class="container">
-        <h1>📘 AI Study Habit Tracker</h1>
+        <main class="app-main">
+            <!-- Auth view -->
+            <section id="authView" class="view active-view">
+                <div class="auth-grid">
+                    <div class="card auth-card">
+                        <h2>Welcome back</h2>
+                        <p class="card-caption">Log in to view your study dashboard.</p>
+                        <form id="loginForm" class="form-vertical">
+                            <label>Email</label>
+                            <input id="loginEmail" type="email" required placeholder="you@example.com" />
+                            <label>Password</label>
+                            <input id="loginPassword" type="password" required placeholder="••••••••" />
+                            <button type="submit">Log in</button>
+                            <div id="loginError" class="form-error"></div>
+                        </form>
+                    </div>
 
-        <h2>Study Session</h2>
-        <input id="subjectInput" type="text" placeholder="Subject (e.g. Math)" />
-        <input id="durationInput" type="number" placeholder="Duration (minutes)" />
-        <input id="moodInput" type="text" placeholder="Mood (optional)" />
+                    <div class="card auth-card alt">
+                        <h2>New here?</h2>
+                        <p class="card-caption">Create a free account to start tracking your study habits.</p>
+                        <form id="signupForm" class="form-vertical">
+                            <label>Email</label>
+                            <input id="signupEmail" type="email" required placeholder="you@example.com" />
+                            <label>Password</label>
+                            <input id="signupPassword" type="password" required placeholder="Minimum 6 characters" />
+                            <button type="submit">Sign up</button>
+                            <div id="signupError" class="form-error"></div>
+                        </form>
+                    </div>
+                </div>
+            </section>
 
-        <div class="buttons">
-            <button onclick="createSessionSummary()">Create Session Summary</button>
-            <button onclick="getLogCount()">Get Log Entry Count</button>
-            <button onclick="downloadReport()">Download Study Report</button>
-        </div>
+            <!-- Dashboard view -->
+            <section id="dashboardView" class="view">
+                <div class="dashboard-grid">
+                    <section class="column column-left">
+                        <div class="card">
+                            <h2>Log study session</h2>
+                            <form id="sessionForm" class="form-vertical">
+                                <label>Subject</label>
+                                <input id="sessionSubject" type="text" required placeholder="Math, Physics, English..." />
 
-        <h2>Study Log File</h2>
-        <textarea id="noteInput" placeholder="Write your note here..."></textarea>
+                                <label>Duration (minutes)</label>
+                                <input id="sessionDuration" type="number" min="0" required placeholder="45" />
 
-        <div class="buttons">
-            <button onclick="writeNote()">Write</button>
-            <button onclick="appendNote()">Append</button>
-            <button onclick="readNote()">Read</button>
-            <button onclick="deleteNote()">Delete</button>
-            <button onclick="streamNote()">Stream</button>
-        </div>
+                                <label>Mood (optional)</label>
+                                <input id="sessionMood" type="text" placeholder="Focused, tired, etc." />
 
-        <div class="output" id="output"></div>
+                                <label>Date</label>
+                                <input id="sessionDate" type="date" />
+
+                                <button type="submit">Save session</button>
+                                <div id="sessionError" class="form-error"></div>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <h2>Download report</h2>
+                            <p class="card-caption">Export your study history as a CSV report.</p>
+                            <button id="downloadReportBtn">Download study report</button>
+                        </div>
+                    </section>
+
+                    <section class="column column-right">
+                        <div class="stats-row">
+                            <div class="stat-card card">
+                                <div class="stat-label">Total study time</div>
+                                <div id="totalHours" class="stat-value">0 h</div>
+                                <div id="totalMinutes" class="stat-sub">0 minutes</div>
+                            </div>
+                            <div class="stat-card card">
+                                <div class="stat-label">Today</div>
+                                <div id="todayMinutes" class="stat-value">0 min</div>
+                                <div id="sessionsCount" class="stat-sub">0 sessions</div>
+                            </div>
+                            <div class="stat-card card">
+                                <div class="stat-label">Top subject</div>
+                                <div id="topSubject" class="stat-value">–</div>
+                                <div id="topSubjectMinutes" class="stat-sub"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2>Weekly focus</h2>
+                            <div id="chartContainer" class="chart-container">
+                                <!-- bars injected by JS -->
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2>Study history</h2>
+                            <div class="table-wrapper">
+                                <table class="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Subject</th>
+                                            <th>Duration</th>
+                                            <th>Mood</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script src="script.js"></script>
