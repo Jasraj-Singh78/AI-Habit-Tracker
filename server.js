@@ -1,15 +1,126 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const session = require("express-session");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 const PORT = 5000;
 
+const USERS_FILE = path.join(__dirname, "users.json");
+const SESSIONS_FILE = path.join(__dirname, "sessions.json");
+
 app.use(express.json());
+app.use(
+    session({
+        secret: "change-this-secret-key",
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            httpOnly: true,
+            maxAge: 1000 * 60 * 60 * 24, // 1 day
+        },
+    })
+);
 app.use(express.static("public"));
 
+function readJson(filePath, defaultValue) {
+    try {
+        if (!fs.existsSync(filePath)) {
+            return defaultValue;
+        }
+        const raw = fs.readFileSync(filePath, "utf8");
+        if (!raw.trim()) return defaultValue;
+        return JSON.parse(raw);
+    } catch {
+        return defaultValue;
+    }
+}
+
+function writeJson(filePath, data) {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+function requireAuth(req, res, next) {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    next();
+}
+
+
 /* ==============================
-   1️⃣ Handling Request & Response
+   0️⃣ Auth APIs
+============================== */
+
+app.post("/api/auth/signup", async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password || password.length < 6) {
+        return res.status(400).json({ error: "Email and password (min 6 chars) are required" });
+    }
+
+    const users = readJson(USERS_FILE, []);
+    const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (existing) {
+        return res.status(409).json({ error: "User already exists" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = {
+        id: Date.now().toString(),
+        email,
+        passwordHash,
+    };
+
+    users.push(user);
+    writeJson(USERS_FILE, users);
+
+    req.session.userId = user.id;
+    req.session.email = user.email;
+
+    res.status(201).json({ email: user.email });
+});
+
+app.post("/api/auth/login", async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const users = readJson(USERS_FILE, []);
+    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+        return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    req.session.userId = user.id;
+    req.session.email = user.email;
+
+    res.json({ email: user.email });
+});
+
+app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy(() => {
+        res.clearCookie("connect.sid");
+        res.status(204).end();
+    });
+});
+
+app.get("/api/auth/me", (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json({ email: req.session.email });
+});
+
+/* ==============================
+   1️⃣ Handling Request & Response (basic demo)
 ============================== */
 
 app.get("/", (req, res) => {
@@ -41,7 +152,7 @@ app.post("/session-summary", (req, res) => {
 
 
 /* ==============================
-   2️⃣ File Module Operations
+   2️⃣ File Module Operations (legacy demo)
 ============================== */
 
 // Write to file
