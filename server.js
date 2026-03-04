@@ -56,7 +56,12 @@ app.post("/write", (req, res) => {
 // Read file
 app.get("/read", (req, res) => {
     fs.readFile("data.txt", "utf8", (err, data) => {
-        if (err) return res.status(500).send("Error reading file");
+        if (err) {
+            if (err.code === "ENOENT") {
+                return res.send("No study log found. Start by writing a note.");
+            }
+            return res.status(500).send("Error reading file");
+        }
         res.send(data);
     });
 });
@@ -74,7 +79,12 @@ app.post("/append", (req, res) => {
 // Delete file
 app.delete("/delete", (req, res) => {
     fs.unlink("data.txt", (err) => {
-        if (err) return res.status(500).send("Error deleting file");
+        if (err) {
+            if (err.code === "ENOENT") {
+                return res.send("No study log file to delete");
+            }
+            return res.status(500).send("Error deleting file");
+        }
         res.send("File deleted successfully");
     });
 });
@@ -83,6 +93,9 @@ app.delete("/delete", (req, res) => {
 app.get("/log/count", (req, res) => {
     fs.readFile("data.txt", "utf8", (err, data) => {
         if (err) {
+            if (err.code === "ENOENT") {
+                return res.json({ entryCount: 0 });
+            }
             return res.status(500).json({ error: "Error reading file to count entries" });
         }
 
@@ -108,7 +121,10 @@ app.get("/study-dashboard", (req, res) => {
 
 app.get("/stream", (req, res) => {
     const readStream = fs.createReadStream("data.txt", "utf8");
-    readStream.on("error", () => {
+    readStream.on("error", (err) => {
+        if (err.code === "ENOENT") {
+            return res.status(404).send("No study log found to stream");
+        }
         res.status(500).send("Error streaming file");
     });
     readStream.pipe(res);
@@ -121,7 +137,10 @@ app.get("/download-report", (req, res) => {
     res.setHeader("Content-Disposition", 'attachment; filename="study-log.txt"');
     const readStream = fs.createReadStream(filePath);
 
-    readStream.on("error", () => {
+    readStream.on("error", (err) => {
+        if (err.code === "ENOENT") {
+            return res.status(404).send("No study log found to download");
+        }
         res.status(500).send("Error downloading report");
     });
 
