@@ -1,72 +1,63 @@
-# AI Study Habit Tracker (Backend Demo)
+## AI Study Habit Tracker
 
-This project is a small backend built with **Express.js** that demonstrates core Node.js backend concepts using an AI Study Habit Tracker theme:
+Simple MERN-style project: Node.js/Express backend with MongoDB Atlas and a static HTML/CSS/JS frontend.
 
-- **Handling request & response** with Express routes
-- **File module operations** (read, write, append, delete) using the Node.js `fs` module
-- **Serving static files** (HTML, CSS, JS) from the `public` folder
-- **File streams** for efficiently sending large study log reports
+### Project structure
 
-## Getting started
+```text
+ai-study-habit-tracker
+├── backend
+│   ├── src
+│   │   ├── config
+│   │   ├── controllers
+│   │   ├── models
+│   │   ├── routes
+│   │   ├── middleware
+│   │   ├── services
+│   │   └── utils
+│   ├── app.js
+│   └── server.js
+├── frontend
+│   ├── index.html
+│   ├── login.html
+│   └── dashboard.html
+├── .env
+└── package.json
+```
 
-1. Install dependencies:
+### Environment variables (`.env`)
+
+```bash
+PORT=5000
+MONGO_URI=your_mongodb_atlas_connection_string_here
+MONGO_DB_NAME=ai_study_habit_tracker
+JWT_SECRET=supersecretjwtkey_change_me
+JWT_EXPIRES_IN=7d
+```
+
+### Backend (local)
 
 ```bash
 npm install
+npm run dev
 ```
 
-2. Start the server:
+The API will run on `http://localhost:5000`.
 
-```bash
-npm start
-```
+### Frontend (local)
 
-3. Open the Study Dashboard in your browser:
+You can open the `frontend/index.html` file directly in the browser or serve the `frontend` folder with any static file server.
 
-- `http://localhost:5000/study-dashboard`
+### Deployment overview
 
-The dashboard lets you:
+- **Backend**: Render / Railway (Node.js app)
+  - Set `root` to repository root, start command `npm start`
+  - Add environment variables from `.env`
+  - Make sure MongoDB Atlas IP allow list allows your hosting provider
+- **Frontend**: Vercel / Netlify
+  - Deploy the `frontend` directory as a static site
+  - Set the backend API URL as needed using environment variables and adjust `API_BASE` in the frontend if you move off same-origin
+- **Database**: MongoDB Atlas
+  - Create a free cluster, database `ai_study_habit_tracker`
+  - Create a user and update `MONGO_URI` with the connection string
 
-- Create a **study session summary**
-- Check the **number of study log entries**
-- Download a **study report** (streamed file)
-- Directly interact with the study log file (write, append, read, delete, stream)
-
-## Key endpoints
-
-### 1. Handling Request & Response
-
-- `POST /session-summary`
-  - Body:
-    ```json
-    {
-      "subject": "Math",
-      "durationMinutes": 45,
-      "mood": "focused"
-    }
-    ```
-  - Response: JSON summary of the study session with a custom header `X-Study-Tracker: SessionSummary`.
-
-### 2. File Module Operations
-
-- `POST /write` – overwrite `data.txt` with content
-- `POST /append` – append content to `data.txt`
-- `GET /read` – read `data.txt`
-- `DELETE /delete` – delete `data.txt`
-- `GET /log/count` – return `{ "entryCount": number }` for non-empty lines in `data.txt`
-
-### 3. Serving Static Files
-
-- `GET /study-dashboard` – serves `public/index.html` (AI Study Habit Tracker UI)
-- Static assets (CSS, JS) are served from `/public` via `express.static`.
-
-### 4. File Streams
-
-- `GET /stream` – stream the contents of `data.txt` to the client
-- `GET /download-report` – stream `data.txt` as a downloadable file (`study-log.txt`)
-
-## Sample data
-
-The project ships with a small `data.txt` file containing example study sessions so that log-related endpoints work immediately. You can overwrite or append to this file via the UI or API.
-
-# Eval-One
