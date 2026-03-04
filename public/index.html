@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notes Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>📘 Simple Notes Manager</h1>
+
+        <textarea id="noteInput" placeholder="Write your note here..."></textarea>
+
+        <div class="buttons">
+            <button onclick="writeNote()">Write</button>
+            <button onclick="appendNote()">Append</button>
+            <button onclick="readNote()">Read</button>
+            <button onclick="deleteNote()">Delete</button>
+            <button onclick="streamNote()">Stream</button>
+        </div>
+
+        <div class="output" id="output"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
