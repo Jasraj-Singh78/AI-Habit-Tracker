@@ -1,14 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Notes Manager</title>
+    <title>AI Study Habit Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
-        <h1>📘 Simple Notes Manager</h1>
+        <h1>📘 AI Study Habit Tracker</h1>
 
+        <h2>Study Session</h2>
+        <input id="subjectInput" type="text" placeholder="Subject (e.g. Math)" />
+        <input id="durationInput" type="number" placeholder="Duration (minutes)" />
+        <input id="moodInput" type="text" placeholder="Mood (optional)" />
+
+        <div class="buttons">
+            <button onclick="createSessionSummary()">Create Session Summary</button>
+            <button onclick="getLogCount()">Get Log Entry Count</button>
+            <button onclick="downloadReport()">Download Study Report</button>
+        </div>
+
+        <h2>Study Log File</h2>
         <textarea id="noteInput" placeholder="Write your note here..."></textarea>
 
         <div class="buttons">
