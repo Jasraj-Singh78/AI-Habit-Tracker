@@ -123,10 +123,14 @@ app.get("/study-dashboard", (req, res) => {
 app.get("/stream", (req, res) => {
     const readStream = fs.createReadStream("data.txt", "utf8");
     readStream.on("error", (err) => {
-        if (err.code === "ENOENT") {
-            return res.status(404).send("No study log found to stream");
+        if (!res.headersSent) {
+            if (err.code === "ENOENT") {
+                return res.status(404).send("No study log found to stream");
+            }
+            return res.status(500).send("Error streaming file");
         }
-        res.status(500).send("Error streaming file");
+        // If headers are already sent, just terminate the connection
+        res.destroy();
     });
     readStream.pipe(res);
 });
@@ -146,8 +150,11 @@ app.get("/download-report", (req, res) => {
         res.setHeader("Content-Disposition", 'attachment; filename="study-log.txt"');
         const readStream = fs.createReadStream(filePath);
 
-        readStream.on("error", () => {
-            res.status(500).send("Error downloading report");
+        readStream.on("error", (err) => {
+            if (!res.headersSent) {
+                return res.status(500).send("Error downloading report");
+            }
+            res.destroy(err);
         });
 
         readStream.pipe(res);
