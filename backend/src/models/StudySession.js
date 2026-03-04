@@ -22,6 +22,9 @@ const studySessionSchema = new mongoose.Schema(
       required: true,
       default: Date.now,
     },
+    proofImagePath: {
+      type: String,
+    },
   },
   {
     timestamps: true,

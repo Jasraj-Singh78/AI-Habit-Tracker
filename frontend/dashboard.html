@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>AI Study Habit Tracker - Dashboard</title>
+    <title>AI Habit Tracker - Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       * {
@@ -200,7 +200,7 @@
     <main>
       <section class="card">
         <h2>Add study session</h2>
-        <form id="session-form">
+        <form id="session-form" enctype="multipart/form-data">
           <div class="field">
             <label for="subject">Subject</label>
             <input id="subject" name="subject" type="text" required />
@@ -212,6 +212,10 @@
           <div class="field">
             <label for="date">Date</label>
             <input id="date" name="date" type="date" />
+          </div>
+          <div class="field">
+            <label for="proofImage">Proof image (optional)</label>
+            <input id="proofImage" name="proofImage" type="file" accept="image/*" />
           </div>
           <button class="primary" type="submit">Save session</button>
           <div id="session-message" class="message"></div>
@@ -249,7 +253,7 @@
                 <th>Date</th>
                 <th>Subject</th>
                 <th>Duration</th>
-                <th></th>
+                <th>Proof / Actions</th>
               </tr>
             </thead>
             <tbody id="sessions-body"></tbody>
@@ -359,6 +363,11 @@
             <td><span class="chip">${s.duration} min</span></td>
             <td>
               <div class="actions">
+                ${
+                  s.proofImagePath
+                    ? `<img src="${API_BASE + s.proofImagePath}" alt="Proof" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #4b5563;margin-right:8px;" />`
+                    : ''
+                }
                 <button class="btn-ghost" data-action="delete">Delete</button>
               </div>
             </td>
@@ -396,12 +405,31 @@
         const subject = document.getElementById('subject').value.trim();
         const duration = Number(document.getElementById('duration').value);
         const date = document.getElementById('date').value;
+        const proofInput = document.getElementById('proofImage');
 
         try {
-          await api('/api/study-sessions', {
+          const formData = new FormData();
+          formData.append('subject', subject);
+          formData.append('duration', String(duration));
+          if (date) {
+            formData.append('date', date);
+          }
+          if (proofInput && proofInput.files && proofInput.files[0]) {
+            formData.append('proofImage', proofInput.files[0]);
+          }
+
+          const res = await fetch(API_BASE + '/api/study-sessions', {
             method: 'POST',
-            body: JSON.stringify({ subject, duration, date: date || undefined }),
+            headers: {
+              Authorization: 'Bearer ' + token,
+            },
+            body: formData,
           });
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || 'Failed to save session');
+          }
 
           sessionMessage.textContent = 'Session saved!';
           sessionMessage.classList.add('success');

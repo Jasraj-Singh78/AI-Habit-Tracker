@@ -9,11 +9,17 @@ const createStudySession = async (req, res, next) => {
       return res.status(400).json({ message: 'Subject and duration are required' });
     }
 
+    let proofImagePath;
+    if (req.file) {
+      proofImagePath = `/uploads/${req.file.filename}`;
+    }
+
     const session = await StudySession.create({
       user: req.user._id,
       subject,
       duration,
       date: date ? new Date(date) : new Date(),
+      proofImagePath,
     });
 
     res.status(201).json(session);
