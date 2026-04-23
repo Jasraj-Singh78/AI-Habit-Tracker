@@ -1,9 +1,8 @@
 {
-<<<<<<< HEAD
   "name": "ai-study-tracker",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "AI Study Habit Tracker Backend",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
@@ -23,37 +22,5 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-=======
-  "name": "ai-study-habit-tracker",
-  "version": "1.0.0",
-  "description": "AI Study Habit Tracker - Node.js/Express/MongoDB backend with simple frontend",
-  "main": "backend/server.js",
-  "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js"
-  },
-  "keywords": [
-    "study",
-    "habit-tracker",
-    "node",
-    "express",
-    "mongodb"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongodb": "^7.1.0",
-    "mongoose": "^8.5.1",
-    "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
->>>>>>> 8895a123a94ff9dc30808af5a67afae7c77d897b
   }
 }
