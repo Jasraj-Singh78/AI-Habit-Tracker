@@ -1,15 +1,39 @@
 require("dotenv").config();
 
-console.log("MONGO_URI VALUE:");
-console.log(process.env.MONGO_URI);
-
 const app = require("./src/app");
 const connectDB = require("./src/config/db");
 
+const http = require("http");
+const { Server } = require("socket.io");
+
+// CONNECT DATABASE
 connectDB();
 
-const PORT = process.env.PORT || 5000;
+// CREATE SERVER
+const server = http.createServer(app);
 
-app.listen(PORT, () => {
+// SOCKET.IO SETUP
+const io = new Server(server, {
+    cors: {
+        origin: "*"
+    }
+});
+
+global.io = io;
+
+// SOCKET CONNECTION
+io.on("connection", (socket) => {
+    console.log("User connected:", socket.id);
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected");
+    });
+});
+
+// IMPORTANT FOR DEPLOYMENT
+const PORT = process.env.PORT || 3001;
+
+// START SERVER
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

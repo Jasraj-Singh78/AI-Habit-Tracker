@@ -5,11 +5,13 @@ exports.createSession = async (req, res) => {
     try {
         const { subject, duration } = req.body;
 
-        const session = await Session.create({
-            user: req.user.id,
-            subject,
-            duration
-        });
+       const sessionService = require("../services/sessionService");
+
+await sessionService.createSession({
+    user: req.session.user.id,
+    subject,
+    duration
+});
 
         res.status(201).json(session);
     } catch (error) {
@@ -20,15 +22,15 @@ exports.createSession = async (req, res) => {
 // GET USER SESSIONS
 exports.getSessions = async (req, res) => {
     try {
-        const sessions = await Session.find({ user: req.user.id });
-        res.json(sessions);
+        const sessions = await Session.find({ user: req.session.user.id});
+    res.json(sessions);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };  
 exports.getAnalytics = async (req, res) => {
     try {
-        const sessions = await Session.find({ user: req.user.id });
+        const sessions = await Session.find({ user: req.session.user.id });
 
         const totalSessions = sessions.length;
 
@@ -47,7 +49,7 @@ exports.getAnalytics = async (req, res) => {
 };
 exports.getStreak = async (req, res) => {
     try {
-        const sessions = await Session.find({ user: req.user.id }).sort({ date: -1 });
+        const sessions = await Session.find({ user: req.session.user.id }).sort({ date: -1 });
 
         if (sessions.length === 0) {
             return res.json({ streak: 0 });
@@ -76,7 +78,7 @@ exports.getStreak = async (req, res) => {
 };
 exports.getRecommendation = async (req, res) => {
     try {
-        const sessions = await Session.find({ user: req.user.id });
+        const sessions = await Session.find({ user: req.session.user.id });
 
         const totalDuration = sessions.reduce((sum, s) => sum + s.duration, 0);
 
@@ -114,4 +116,5 @@ exports.getRecommendation = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+    res.status(500).render("error", { message: "Something failed" });
 };

@@ -3,10 +3,17 @@ const mongoose = require("mongoose");
 const sessionSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+        ref: "User",
+        required: true
     },
-    subject: String,
-    duration: Number, // in minutes
+    subject: {
+        type: String,
+        required: true
+    },
+    duration: {
+        type: Number,
+        required: true // minutes
+    },
     date: {
         type: Date,
         default: Date.now

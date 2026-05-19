@@ -1,38 +1,28 @@
 const express = require("express");
-const cors = require("cors");
 const session = require("express-session");
-const cookieParser = require("cookie-parser");
+const path = require("path");
 
 const app = express();
 
-// 🔹 Core Middleware
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// 🔹 Cookie + Session (MUST come BEFORE routes)
-app.use(cookieParser());
-
 app.use(session({
-    secret: "mysecretkey",
+    secret: "secret",
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }
+    saveUninitialized: false
 }));
 
-// 🔹 Routes
-const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
-const sessionRoutes = require("./routes/sessionRoutes");
-const sessionAuthRoutes = require("./routes/sessionAuthRoutes");
+app.use(express.static("public"));
 
-app.use("/api/auth", authRoutes);
-app.use("/api/user", userRoutes);
-app.use("/api/sessions", sessionRoutes);
-app.use("/api/session-auth", sessionAuthRoutes);
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
-// 🔹 Test Route
-app.get("/", (req, res) => {
-    res.send("AI Study Habit Tracker API Running");
+app.use("/", require("./routes/viewRoutes"));
+
+// 404
+app.use((req, res) => {
+    res.status(404).send("Page not found");
 });
 
 module.exports = app;

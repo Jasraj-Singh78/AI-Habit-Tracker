@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Signup</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+
+        .container {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 12px;
+            width: 320px;
+            text-align: center;
+        }
+
+        input, button {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+        }
+
+        a {
+            display: block;
+            margin-top: 10px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Create Account 🚀</h2>
+
+    <form action="/signup" method="POST">
+        <input name="name" placeholder="Name" required>
+        <input name="email" placeholder="Email" required>
+        <input name="password" type="password" placeholder="Password" required>
+        <button>Signup</button>
+    </form>
+
+    <a href="/login">Already have an account? Login</a>
+</div>
+
+</body>
+</html>
